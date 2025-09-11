@@ -1,5 +1,8 @@
 # Smart-Note-Taker
 
+## Description
+<-- TO BE ADDED -->
+
 ## Developers
 - Logan Butler
 - Eric Deleenheer
