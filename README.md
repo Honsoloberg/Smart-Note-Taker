@@ -1,4 +1,11 @@
 # Smart-Note-Taker
+
+## Developers
+- Logan Butler
+- Eric Deleenheer
+- Rhea Mathias
+- Rivka Sagi 
+
 ## Requirements
 - Hardware component for recording lectures, should be used by the student
     - Student gains access to hardware device from SAS center
