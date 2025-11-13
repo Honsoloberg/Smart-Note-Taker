@@ -1,6 +1,6 @@
 from faster_whisper import WhisperModel
 import torch
-# import whisperx
+import whisperx
 
 def whisperx_transcribe(model_name: str, audio_file: str) -> str:
     batch_size = 10
