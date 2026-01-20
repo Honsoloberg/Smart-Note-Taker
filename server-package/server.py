@@ -43,6 +43,7 @@ def upload():
 def run_pipeline():
     try:
         print("Running pipeline...")
+        
         # get filename from request
         print(request.json)
         if request.json:
@@ -50,18 +51,25 @@ def run_pipeline():
         else:
             return {"error": "JSON error"}, 400
         print(f"Got filename: {filename}")
+
         transcript = transcriber.transcribe(os.path.join(UPLOAD_DIR, filename))
+
         print("transcribed")
+
         with open("transcript.txt", "w") as f:
             f.write(transcript)
+
         markdown = llmMarkdown.run_llmMarkdown(transcript)
         markdown = llmMarkdown.sanitize_Markdown(markdown)
+
         print("Generate Markdown File")
         os.makedirs("markdown", exist_ok=True)
         with open(f"markdown/{filename}.md", "x") as f:
             f.write(markdown)
         print("Pipeline complete.")
+
         return {"markdown": markdown, "filename": filename}, 200
+    
     except Exception as e:
         print(f"Error running pipeline: {e}")
         return {"error": str(e)}, 500
