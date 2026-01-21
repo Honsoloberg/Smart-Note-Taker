@@ -5,6 +5,7 @@ import time
 import uuid
 import llmMarkdown
 import transcriber
+import json
 
 
 app = Flask(__name__)
@@ -13,7 +14,9 @@ app.config['MAX_CONTENT_LENGTH'] = 300 * 1024 * 1024
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')
+CHAT_DIR = os.path.join(BASE_DIR, 'chat_history')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(CHAT_DIR, exist_ok=True)
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -73,6 +76,65 @@ def run_pipeline():
     except Exception as e:
         print(f"Error running pipeline: {e}")
         return {"error": str(e)}, 500
+    
+
+# MARK: Chat endpoint
+@app.route('/chat', methods=['POST'])
+def run_chat():
+    # try:
+        print("Running Chat Service...")
+        data = request.json
+        print('Received data:', data)
+        
+        chat_id = data.get('filename')
+        prompt = data.get('prompt')
+
+        if not prompt:
+            return {"error": "No prompt provided"}, 400
+
+        print(f"Chat ID: {chat_id}")
+        print(f"Message: {prompt}")
+
+        # get chat history
+        print("chat dir: ", CHAT_DIR)
+        print(f"Chat history: {os.path.join(CHAT_DIR, chat_id)}")
+        print(os.path.exists(os.path.join(CHAT_DIR, chat_id)))
+        if not os.path.exists(os.path.join(CHAT_DIR, chat_id)):
+            print(f"Creating new chat history for {chat_id}")
+            os.makedirs(CHAT_DIR, exist_ok=True)
+            with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
+                f.write("{}")
+
+        # read as json and then add new message
+        with open(os.path.join(CHAT_DIR, chat_id), "r") as f:
+            chat_history = json.load(f)
+        if not chat_history:
+            chat_history = []
+        chat_history.append({"role": "user", "content": prompt})
+
+        # write as json
+        with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
+            json.dump(chat_history, f)
+
+        with open(os.path.join(BASE_DIR, "markdown", chat_id), "r") as f: # markdown or test_outputs, both work
+            note = f.read()
+
+        response = llmMarkdown.run_chat(chat_history, note)
+        print(f"Response: {response}")
+
+        # yield response here, if streaming 
+
+        chat_history.append({"role": "system", "content": response})
+
+        # write as json
+        with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
+            json.dump(chat_history, f, indent=4)
+
+        return {"response": response}, 200
+
+    # except Exception as e:
+    #     print(f"Error running pipeline: {e}")
+    #     return {"error": str(e)}, 500
 
 @app.route('/api/notes/<filename>', methods=['GET'])
 @app.route('/notes/<filename>', methods=['GET'])
