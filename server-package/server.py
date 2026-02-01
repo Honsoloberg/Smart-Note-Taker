@@ -5,6 +5,7 @@ import time
 import uuid
 import llmMarkdown
 import transcriber
+import mongo
 import json
 
 
@@ -57,13 +58,18 @@ def run_pipeline():
 
         transcript = transcriber.transcribe(os.path.join(UPLOAD_DIR, filename))
 
+        os.remove(os.path.join(UPLOAD_DIR, filename))
+
         print("transcribed")
 
-        with open("transcript.txt", "w") as f:
-            f.write(transcript)
+        file_name = f"{uuid.uuid4().hex}_{int(time.time())}"
+        
+        mongo.upload_transcription(transcript, name=file_name)
 
         markdown = llmMarkdown.run_llmMarkdown(transcript)
         markdown = llmMarkdown.sanitize_Markdown(markdown)
+
+        mongo.create_note(markdown, name="note_{}".format(file_name))
 
         print("Generate Markdown File")
         os.makedirs("markdown", exist_ok=True)
