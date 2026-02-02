@@ -3,8 +3,17 @@ from bson import ObjectId
 import random as r
 # import uuid
 from datetime import datetime, timezone
+from dotenv import dotenv_values
 
-uri = "mongodb+srv://rheamathias:rhea2026@ainotetaker.bn4xbko.mongodb.net/?appName=AINotetaker"
+env = dotenv_values("..\\.env")
+uri = str(env.get("DB_URI"))
+
+if not uri:
+    print("<---------------------------------------->")
+    print("env not working for Database")
+    print("<---------------------------------------->")
+else:
+    print(uri)
 
 def upload_transcription(content: str, user_id='697cf4b73f15e2493ee71297', name=""):
     client = MongoClient(uri, server_api=ServerApi('1'))
