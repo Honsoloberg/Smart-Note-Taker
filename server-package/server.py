@@ -64,21 +64,22 @@ def run_pipeline():
         print("transcribed")
 
         file_name = f"{uuid.uuid4().hex}_{int(time.time())}"
-        
-        mongo.upload_transcription(transcript, name=file_name)
 
         markdown = llmMarkdown.run_llmMarkdown(transcript)
         markdown = llmMarkdown.sanitize_Markdown(markdown)
 
-        mongo.create_note(markdown, name="note_{}".format(file_name))
+        note_id = mongo.create_note(markdown, name="note_{}".format(file_name))
+
+        mongo.upload_transcription(transcript, str(note_id))
 
         print("Generate Markdown File")
         os.makedirs("markdown", exist_ok=True)
+        
         with open(f"markdown/{filename}.md", "x") as f:
             f.write(markdown)
         print("Pipeline complete.")
 
-        return {"markdown": markdown, "filename": filename}, 200
+        return {"markdown": markdown, "filename": str(note_id)}, 200
     
     except Exception as e:
         print(f"Error running pipeline: {e}")
@@ -92,8 +93,10 @@ def run_chat():
         print("Running Chat Service...")
         data = request.json
         print('Received data:', data)
+
+        # print(data.get("filename"))
         
-        chat_id = data.get('filename')
+        chat_id, chat_history, head= mongo.get_chat(data.get("filename"))
         prompt = data.get('prompt')
 
         if not prompt:
@@ -103,39 +106,45 @@ def run_chat():
         print(f"Message: {prompt}")
 
         # get chat history
-        print("chat dir: ", CHAT_DIR)
-        print(f"Chat history: {os.path.join(CHAT_DIR, chat_id)}")
-        print(os.path.exists(os.path.join(CHAT_DIR, chat_id)))
-        if not os.path.exists(os.path.join(CHAT_DIR, chat_id)):
-            print(f"Creating new chat history for {chat_id}")
-            os.makedirs(CHAT_DIR, exist_ok=True)
-            with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
-                f.write("{}")
+            # print("chat dir: ", CHAT_DIR)
+            # print(f"Chat history: {os.path.join(CHAT_DIR, chat_id)}")
+            # print(os.path.exists(os.path.join(CHAT_DIR, chat_id)))
+
+            # if not os.path.exists(os.path.join(CHAT_DIR, chat_id)):
+            #     print(f"Creating new chat history for {chat_id}")
+            #     os.makedirs(CHAT_DIR, exist_ok=True)
+
+            #     with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
+            #         f.write("{}")
 
         # read as json and then add new message
-        with open(os.path.join(CHAT_DIR, chat_id), "r") as f:
-            chat_history = json.load(f)
-        if not chat_history:
-            chat_history = []
+            # with open(os.path.join(CHAT_DIR, chat_id), "r") as f:
+            #     chat_history = json.load(f)
+            # if not chat_history:
+            #     chat_history = []
         chat_history.append({"role": "user", "content": prompt})
 
+        
+
         # write as json
-        with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
-            json.dump(chat_history, f)
+            # with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
+            #     json.dump(chat_history, f)
 
-        with open(os.path.join(BASE_DIR, "markdown", chat_id), "r") as f: # markdown or test_outputs, both work
-            note = f.read()
+            # with open(os.path.join(BASE_DIR, "markdown", chat_id), "r") as f: # markdown or test_outputs, both work
+            #     note = f.read()
 
-        response = llmMarkdown.run_chat(chat_history, note)
+        response = llmMarkdown.run_chat(chat_history, head)
         print(f"Response: {response}")
 
-        # yield response here, if streaming 
-
+        # yield response here, if streaming is implemented
         chat_history.append({"role": "system", "content": response})
 
         # write as json
-        with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
-            json.dump(chat_history, f, indent=4)
+        # with open(os.path.join(CHAT_DIR, chat_id), "w") as f:
+        #     json.dump(chat_history, f, indent=4)
+
+        if not mongo.update_chat(str(chat_id), chat_history):
+            return {"error": "Failed to contact server"}, 500
 
         return {"response": response}, 200
 
