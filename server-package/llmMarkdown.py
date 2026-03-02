@@ -23,7 +23,7 @@ api_key = str(env.get("API_KEY"))
 client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com") or None
 model = "deepseek-chat"
 
-def run_AItranscribe(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROMPT) -> str:
+def run_noteGenerate(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROMPT) -> str:
     print("Running AI model...")
     # print(api_key)
     if not client:
@@ -43,7 +43,7 @@ def run_AItranscribe(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROM
  
 def run_llmMarkdown(user_prompt: str) -> str:
     print("Running LLM Markdown generation...")
-    return run_AItranscribe(model, user_prompt)
+    return run_noteGenerate(model, user_prompt)
 
 def sanitize_Markdown(text: str) -> str:
     text = text.replace("–", "-")
