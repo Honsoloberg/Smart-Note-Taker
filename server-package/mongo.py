@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from dotenv import dotenv_values
 import json
 
-env = dotenv_values("..\\.env")
+env = dotenv_values("..//.env")
 uri = str(env.get("DB_URI"))
 
 def upload_transcription(content: str, noteID: str, user_id='697cf4b73f15e2493ee71297'):

@@ -17,7 +17,7 @@ Use the context of the previous messages to provide accurate and relevant answer
 The following 2 messages are the transcription and summarized note respectively:
 """
 
-env = dotenv_values("..\\.env")
+env = dotenv_values("..//.env")
 api_key = str(env.get("API_KEY"))
 
 client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com") or None
