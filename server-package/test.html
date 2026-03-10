@@ -58,6 +58,16 @@ input{
 <button onclick="upload()">Upload</button>
 <button onclick="runPipeline()">Run Pipeline</button>
 
+<h2>Notes</h2>
+
+<button onclick="getAllNotes()">Get All Notes</button>
+
+<br><br>
+
+<input id="noteFile" placeholder="note filename / id">
+
+<button onclick="getNote()">Get Note</button>
+
 <h2>Chat</h2>
 
 <input id="filename" placeholder="note id">
@@ -153,6 +163,7 @@ async function runPipeline(){
     const data = await res.json()
 
     filename.value = data.filename
+    noteFile.value = data.filename
 
     show(data)
 }
@@ -178,6 +189,34 @@ async function health(){
     show(await res.json())
 }
 
+async function getAllNotes(){
+
+    const res = await fetch("/allnotes",{
+        headers:{
+            "Authorization":`Bearer ${token}`
+        }
+    })
+
+    const data = await res.json()
+
+    show(data)
+}
+
+
+async function getNote(){
+
+    const file = document.getElementById("noteFile").value
+
+    const res = await fetch(`/notes/${file}`,{
+        headers:{
+            "Authorization":`Bearer ${token}`
+        }
+    })
+
+    const text = await res.text()
+
+    show(text)
+}
 </script>
 
 </body>
