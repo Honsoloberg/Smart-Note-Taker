@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>API Test Panel</title>
+
+<style>
+body {
+    font-family: Arial;
+    background:#111;
+    color:#eee;
+    padding:30px;
+}
+
+button{
+    padding:10px 20px;
+    margin:5px;
+    font-size:14px;
+}
+
+input{
+    padding:8px;
+    margin:5px;
+}
+
+#output{
+    background:#000;
+    border:1px solid #444;
+    padding:10px;
+    margin-top:20px;
+    white-space:pre-wrap;
+    max-height:400px;
+    overflow:auto;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Backend Test Panel</h1>
+
+<h2>User</h2>
+
+<input id="username" placeholder="username" value="testuser">
+<input id="password" placeholder="password" value="testpass">
+
+<br>
+
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
+<button onclick="profile()">Profile</button>
+
+<h2>Upload / Run</h2>
+
+<input type="file" id="file">
+
+<br>
+
+<button onclick="upload()">Upload</button>
+<button onclick="runPipeline()">Run Pipeline</button>
+
+<h2>Chat</h2>
+
+<input id="filename" placeholder="note id">
+<input id="prompt" placeholder="chat prompt">
+
+<button onclick="chat()">Send Chat</button>
+
+<h2>Health</h2>
+
+<button onclick="health()">Health Check</button>
+
+<div id="output"></div>
+
+<script>
+
+let token = null
+let uploadedFile = null
+
+function show(data){
+    document.getElementById("output").innerText =
+        JSON.stringify(data,null,2)
+}
+
+async function register(){
+
+    const res = await fetch("/register",{
+        method:"POST",
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            username:username.value,
+            password:password.value
+        })
+    })
+
+    show(await res.json())
+}
+
+async function login(){
+
+    const res = await fetch("/login",{
+        method:"POST",
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            username:username.value,
+            password:password.value
+        })
+    })
+
+    const data = await res.json()
+
+    token = data.access_token
+
+    show(data)
+}
+
+async function profile(){
+
+    const res = await fetch("/profile",{
+        headers:{
+            Authorization:`Bearer ${token}`
+        }
+    })
+
+    show(await res.json())
+}
+
+async function upload(){
+
+    const file = document.getElementById("file").files[0]
+
+    const res = await fetch("/upload",{
+        method:"POST",
+        body:file
+    })
+
+    const data = await res.json()
+
+    uploadedFile = data.filename
+
+    show(data)
+}
+
+async function runPipeline(){
+
+    const res = await fetch("/run",{
+        method:"POST",
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            filename: uploadedFile
+        })
+    })
+
+    const data = await res.json()
+
+    filename.value = data.filename
+
+    show(data)
+}
+
+async function chat(){
+
+    const res = await fetch("/chat",{
+        method:"POST",
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            filename: filename.value,
+            prompt: prompt.value
+        })
+    })
+
+    show(await res.json())
+}
+
+async function health(){
+
+    const res = await fetch("/health")
+
+    show(await res.json())
+}
+
+</script>
+
+</body>
+</html>

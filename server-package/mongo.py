@@ -1,4 +1,11 @@
-from pymongo.mongo_client import MongoClient #pip install pymongo
+# from pymongo.mongo_client import MongoClient #pip install pymongo
+try:
+    import mongomock
+    MongoClient = mongomock.MongoClient
+    print("Using mock MongoDB")
+except ImportError:
+    from pymongo.mongo_client import MongoClient
+    
 from pymongo.server_api import ServerApi
 from pymongo.errors import PyMongoError, DocumentTooLarge
 from bson import ObjectId
@@ -8,12 +15,13 @@ import random as r
 from datetime import datetime, timezone
 from dotenv import dotenv_values
 import json
+import bcrypt
 
 env = dotenv_values("..//.env")
 uri = str(env.get("DB_URI"))
 
+client = MongoClient(uri, server_api=ServerApi('1'))
 def upload_transcription(content: str, noteID: str, user_id='697cf4b73f15e2493ee71297'):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     transcriptions = db["Transcription"]
 
@@ -23,22 +31,20 @@ def upload_transcription(content: str, noteID: str, user_id='697cf4b73f15e2493ee
     }
 
     result = transcriptions.insert_one(upload)
-    client.close()
+    
 
     return result.inserted_id
 
 def get_transcription(noteID):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     transcriptions = db["Transcription"]
 
     transcription= transcriptions.find_one({"noteID": noteID})
-    client.close()
+    
 
     return transcription
 
 def create_note(content: str, user_id='697cf4b73f15e2493ee71297', name=""):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     notes = db["Notes"]
     
@@ -53,22 +59,20 @@ def create_note(content: str, user_id='697cf4b73f15e2493ee71297', name=""):
     }
 
     result = notes.insert_one(upload)
-    client.close()
+    
 
     return result.inserted_id
 
 def get_notes(user_id='697cf4b73f15e2493ee71297'):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     notes = db["Notes"]
 
     notes_list = list(notes.find({"user_id": user_id}))
-    client.close()
+    
 
     return notes_list
 
 def create_chat(noteID: str):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     chats = db["Ai_chatbot"]
     transcriptions = db["Transcription"]
@@ -91,12 +95,11 @@ def create_chat(noteID: str):
     print("new chat created for noteID: ", noteID)
 
     result = chats.insert_one(upload)
-    client.close()
+    
 
     return result.inserted_id
 
 def get_chat(noteID: str):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     chats = db["Ai_chatbot"]
 
@@ -116,12 +119,11 @@ def get_chat(noteID: str):
     # print(f"{history}")
     # print(str(chatID))
 
-    client.close()
+    
 
     return str(chatID), history, head
 
 def update_chat(chatID: str, history):
-    client = MongoClient(uri, server_api=ServerApi('1'))
     db = client["App"]
     chats = db["Ai_chatbot"]
 
@@ -141,20 +143,81 @@ def update_chat(chatID: str, history):
         })
         if result.modified_count <= 0:
             print(f"Failed to update chat with ID: {chatID}")
-            client.close()
+            
             return False
     except DocumentTooLarge as e:    
         print("Chat history exceeded document size limit.")
-        client.close()
+        
         return False
     except PyMongoError as e:
         print(f"Error updating chat with ID {chatID}: {e}")
-        client.close()
+        
         return False
 
     return True
 
+def get_user_by_username(username):
+    db = client["App"]
+    users = db["Users"]
 
+    try:
+        user = users.find_one({"username": username})
+        if user is None:
+            print(f"No user found with username: {username}")
+            
+            return None
+        else:
+            return user
+    except PyMongoError as e:
+        print(f"Error getting user with username {username}: {e}")
+        
+        return None
+
+def create_user(username, password):
+    db = client["App"]
+    users = db["Users"]
+
+    try:
+        user = users.find_one({"username": username})
+        if user is not None:
+            print(f"User with username {username} already exists.")
+            
+            return None
+        else:
+            password_hash = bcrypt.hashpw(password, bcrypt.gensalt())
+            user = {
+                "username": username,
+                "password_hash": password_hash,
+                "created_at": str(datetime.now(timezone.utc))
+            }
+            result = users.insert_one(user)
+            if result.inserted_id is None:
+                print(f"Failed to create user with username: {username}")
+                
+                return None
+            else:
+                return result.inserted_id
+    except PyMongoError as e:
+        print(f"Error creating user with username {username}: {e}")
+        
+        return None
+
+def get_user_by_id(user_id):
+    db = client["App"]
+    users = db["Users"]
+
+    try:
+        user = users.find_one({"_id": ObjectId(user_id)})
+        if user is None:
+            print(f"No user found with ID: {user_id}")
+            
+            return None
+        else:
+            return user
+    except PyMongoError as e:
+        print(f"Error getting user with ID {user_id}: {e}")
+        
+        return None
 
 
     
@@ -172,6 +235,6 @@ if __name__ == "__main__":
             reply = client.server_info()
             print("<---------------------------------------->")
             print(reply)
-            client.close()
+            
         except PyMongoError as e:
             print(f"Error connecting to MongoDB: {e}")
