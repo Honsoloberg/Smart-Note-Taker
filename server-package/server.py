@@ -61,7 +61,7 @@ def login():
 def profile():
 
     user_id = fljwt.get_jwt_identity()
-    user = mongo.get_user_by_id(user_id)
+    user = mongo.get_user_by_id(user_id) or {}
 
     return {
         "username": user["username"]
@@ -125,7 +125,7 @@ def run_pipeline():
             f.write(markdown)
         print("Pipeline complete.")
 
-        return {"markdown": markdown, "filename": str(note_id)}, 200
+        return {"filename": str(note_id)}, 200
     
     except Exception as e:
         print(f"Error running pipeline: {e}")
