@@ -20,9 +20,11 @@ import bcrypt
 env = dotenv_values("..//.env")
 uri = str(env.get("DB_URI"))
 
-client = MongoClient(uri, server_api=ServerApi('1'))
+def get_client():
+    return MongoClient(uri, server_api=ServerApi('1'))
+
 def upload_transcription(content: str, noteID: str, user_id='697cf4b73f15e2493ee71297'):
-    db = client["App"]
+    db = get_client()["App"]
     transcriptions = db["Transcription"]
 
     upload = {
@@ -36,7 +38,7 @@ def upload_transcription(content: str, noteID: str, user_id='697cf4b73f15e2493ee
     return result.inserted_id
 
 def get_transcription(noteID):
-    db = client["App"]
+    db = get_client()["App"]
     transcriptions = db["Transcription"]
 
     transcription= transcriptions.find_one({"noteID": noteID})
@@ -45,7 +47,7 @@ def get_transcription(noteID):
     return transcription
 
 def create_note(content: str, user_id='697cf4b73f15e2493ee71297', name=""):
-    db = client["App"]
+    db = get_client()["App"]
     notes = db["Notes"]
     
     number = r.randint(1000, 9999)
@@ -64,7 +66,7 @@ def create_note(content: str, user_id='697cf4b73f15e2493ee71297', name=""):
     return result.inserted_id
 
 def get_notes(user_id='697cf4b73f15e2493ee71297'):
-    db = client["App"]
+    db = get_client()["App"]
     notes = db["Notes"]
 
     notes_list = list(notes.find({"user_id": user_id}))
@@ -73,7 +75,7 @@ def get_notes(user_id='697cf4b73f15e2493ee71297'):
     return notes_list
 
 def create_chat(noteID: str):
-    db = client["App"]
+    db = get_client()["App"]
     chats = db["Ai_chatbot"]
     transcriptions = db["Transcription"]
     notes = db["Notes"]
@@ -100,7 +102,7 @@ def create_chat(noteID: str):
     return result.inserted_id
 
 def get_chat(noteID: str):
-    db = client["App"]
+    db = get_client()["App"]
     chats = db["Ai_chatbot"]
 
     chat = chats.find_one({"noteID": ObjectId(noteID)})
@@ -124,7 +126,7 @@ def get_chat(noteID: str):
     return str(chatID), history, head
 
 def update_chat(chatID: str, history):
-    db = client["App"]
+    db = get_client()["App"]
     chats = db["Ai_chatbot"]
 
     # print(chatID)
@@ -157,7 +159,7 @@ def update_chat(chatID: str, history):
     return True
 
 def get_user_by_username(username):
-    db = client["App"]
+    db = get_client()["App"]
     users = db["Users"]
 
     try:
@@ -174,7 +176,7 @@ def get_user_by_username(username):
         return None
 
 def create_user(username, password):
-    db = client["App"]
+    db = get_client()["App"]
     users = db["Users"]
 
     try:
@@ -203,7 +205,7 @@ def create_user(username, password):
         return None
 
 def get_user_by_id(user_id):
-    db = client["App"]
+    db = get_client()["App"]
     users = db["Users"]
 
     try:
