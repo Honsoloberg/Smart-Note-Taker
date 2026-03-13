@@ -74,6 +74,15 @@ def get_notes(user_id='697cf4b73f15e2493ee71297'):
 
     return notes_list
 
+def get_indNote(noteID):
+    db = get_client()["App"]
+    notes = db["Notes"]
+
+    note = notes.find_one({"_id": ObjectId(noteID)})
+    
+
+    return note
+
 def create_chat(noteID: str):
     db = get_client()["App"]
     chats = db["Ai_chatbot"]

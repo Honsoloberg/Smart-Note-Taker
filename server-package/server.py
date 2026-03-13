@@ -160,7 +160,7 @@ def run_chat():
 
 @app.route('/notes/<filename>', methods=['GET'])
 def get_note(filename):
-    return send_file(os.path.join("markdown", filename) + ".md", mimetype='text/markdown')
+    return send_file(mongo.get_indNote(filename), mimetype='text/markdown', as_attachment=True, download_name=f"{filename}.md")
 
 @app.route('/health', methods=['GET'])
 def health_check():
