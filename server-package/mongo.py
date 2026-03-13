@@ -20,8 +20,13 @@ import bcrypt
 env = dotenv_values("..//.env")
 uri = str(env.get("DB_URI"))
 
+client = None
+
 def get_client():
-    return MongoClient(uri, server_api=ServerApi('1'))
+    global client
+    if not client:
+        client = MongoClient(uri, server_api=ServerApi('1'))
+    return client
 
 def upload_transcription(content: str, noteID: str, user_id='697cf4b73f15e2493ee71297'):
     db = get_client()["App"]
@@ -69,7 +74,7 @@ def get_notes(user_id='697cf4b73f15e2493ee71297'):
     db = get_client()["App"]
     notes = db["Notes"]
 
-    notes_list = list(notes.find({"user_id": user_id}))
+    notes_list = list(notes.find({"user_id": user_id})) or None
     
 
     return notes_list
@@ -79,9 +84,10 @@ def get_indNote(noteID):
     notes = db["Notes"]
 
     note = notes.find_one({"_id": ObjectId(noteID)})
-    
 
-    return note
+    content = note.get("content") if note else ""
+
+    return content
 
 def create_chat(noteID: str):
     db = get_client()["App"]

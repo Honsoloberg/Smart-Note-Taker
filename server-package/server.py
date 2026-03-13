@@ -10,6 +10,7 @@ import json
 from dotenv import dotenv_values
 import bcrypt
 import flask_jwt_extended as fljwt # pip install flask-jwt-extended
+from io import BytesIO
 
 env = dotenv_values("..//.env")
 
@@ -121,10 +122,10 @@ def run_pipeline():
         mongo.upload_transcription(transcript, str(note_id))
 
         print("Generate Markdown File")
-        os.makedirs("markdown", exist_ok=True)
+        # os.makedirs("markdown", exist_ok=True)
         
-        with open(f"markdown/{filename}.md", "x") as f:
-            f.write(markdown)
+        # with open(f"markdown/{filename}.md", "x") as f:
+        #     f.write(markdown)
         print("Pipeline complete.")
 
         return {"filename": str(note_id)}, 200
@@ -160,7 +161,17 @@ def run_chat():
 
 @app.route('/notes/<filename>', methods=['GET'])
 def get_note(filename):
-    return send_file(mongo.get_indNote(filename), mimetype='text/markdown', as_attachment=True, download_name=f"{filename}.md")
+    note_content = mongo.get_indNote(filename)
+    return send_file(BytesIO(note_content.encode()), mimetype='text/markdown', as_attachment=True, download_name=f"{filename}.md")
+
+@app.rounte('/notes', methods=['GET'])
+def get_notes():
+    notes = mongo.get_notes()
+    if notes is None:
+        return {"error": "Failed to retrieve notes"}, 500
+    notes_json = json.dumps(dict(notes=[{"_id": str(note["_id"]), "name": note.get("name", ""), "content": note.get("content", ""), "created_at": note.get("created_at", "")} for note in notes]))
+
+    return {"notes": notes_json}, 200
 
 @app.route('/health', methods=['GET'])
 def health_check():

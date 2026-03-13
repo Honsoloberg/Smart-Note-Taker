@@ -19,9 +19,16 @@ The following 2 messages are the transcription and summarized note respectively:
 
 env = dotenv_values("..//.env")
 api_key = str(env.get("API_KEY"))
+base_url = "https://api.deepseek.com"
 
-client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com") or None
+client = None
 model = "deepseek-chat"
+
+def get_client():
+    global client
+    if not client:
+        client = OpenAI(api_key=api_key, base_url=base_url)
+    return client
 
 def run_noteGenerate(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROMPT) -> str:
     print("Running AI model...")
