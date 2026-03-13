@@ -7,7 +7,12 @@ def transcribe(audio_file: str) -> str:
     return vosk_transcribe(audio_file)
 
 SetLogLevel(-1)
-model = Model(lang="en-us")
+model = None
+
+def set_model():
+    global model
+    if not model:
+        model = Model(lang="en-us")
 
 
 def get_audio_duration(audio_file: str) -> float:
@@ -27,6 +32,9 @@ def get_audio_duration(audio_file: str) -> float:
     return float(result.stdout.strip())
 
 def vosk_transcribe(audio_file: str) -> str:
+
+    set_model()
+    
     rec = KaldiRecognizer(model, 16000)
 
     # Critical performance flags

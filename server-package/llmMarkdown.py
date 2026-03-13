@@ -1,6 +1,6 @@
 import os
 from openai import OpenAI
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 
 TRANSCRIBE_PROMPT = """You are a meeting summarizer.
 Rules:
@@ -16,9 +16,9 @@ CHAT_PROMPT = """You are a helpful AI assistant that helps users by answering qu
 Use the context of the previous messages to provide accurate and relevant answers. Be concise and clear in your responses.
 The following 2 messages are the transcription and summarized note respectively:
 """
+load_dotenv()
 
-env = dotenv_values("..//.env")
-api_key = str(env.get("API_KEY"))
+api_key = str(os.getenv("API_KEY"))
 base_url = "https://api.deepseek.com"
 
 client = None

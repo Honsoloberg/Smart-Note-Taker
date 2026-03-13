@@ -1,4 +1,4 @@
-.env
+server-package/.env
 server-package/markdown
 server-package/uploads
 server-package/test_outputs

@@ -6,6 +6,7 @@ try:
 except ImportError:
     from pymongo.mongo_client import MongoClient
     
+import os
 from pymongo.server_api import ServerApi
 from pymongo.errors import PyMongoError, DocumentTooLarge
 from bson import ObjectId
@@ -13,12 +14,13 @@ from bson.errors import BSONError
 import random as r
 # import uuid
 from datetime import datetime, timezone
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 import json
 import bcrypt
 
-env = dotenv_values("..//.env")
-uri = str(env.get("DB_URI"))
+load_dotenv()
+
+uri = str(os.getenv("DB_URI"))
 
 client = None
 
