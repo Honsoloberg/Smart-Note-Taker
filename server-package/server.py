@@ -13,6 +13,7 @@ import flask_jwt_extended as fljwt # pip install flask-jwt-extended
 from io import BytesIO
 
 load_dotenv()
+llmMarkdown.client = None
 
 app = Flask(__name__)
 jwt = fljwt.JWTManager(app)
@@ -169,7 +170,7 @@ def get_notes():
     notes = mongo.get_notes()
     if notes is None:
         return {"error": "Failed to retrieve notes"}, 500
-    notes_json = json.dumps(dict(notes=[{"_id": str(note["_id"]), "name": note.get("name", ""), "content": note.get("content", ""), "created_at": note.get("created_at", "")} for note in notes]))
+    notes_json = json.dumps(dict(notes=[{"_id": str(note["_id"]), "name": note.get("name", "")} for note in notes]))
 
     return {"notes": notes_json}, 200
 

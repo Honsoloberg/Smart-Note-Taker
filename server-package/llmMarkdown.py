@@ -26,7 +26,7 @@ model = "deepseek-chat"
 
 def get_client():
     global client
-    if not client:
+    if client is None:
         client = OpenAI(api_key=api_key, base_url=base_url)
     return client
 
@@ -65,6 +65,9 @@ def sanitize_Markdown(text: str) -> str:
     return text
 
 def run_AIchat(model: str, chat_history, head) -> str:
+    global client
+
+    client = get_client()
     print("Running AI chat model...")
     if not client:
         raise ValueError("OpenAI client not initialized. Check API key.")
