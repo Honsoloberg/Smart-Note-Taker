@@ -164,7 +164,7 @@ def get_note(filename):
     note_content = mongo.get_indNote(filename)
     return send_file(BytesIO(note_content.encode()), mimetype='text/markdown', as_attachment=True, download_name=f"{filename}.md")
 
-@app.rounte('/notes', methods=['GET'])
+@app.route('/notes', methods=['GET'])
 def get_notes():
     notes = mongo.get_notes()
     if notes is None:

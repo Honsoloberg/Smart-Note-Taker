@@ -31,6 +31,9 @@ def get_client():
     return client
 
 def run_noteGenerate(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROMPT) -> str:
+    global client
+
+    client = get_client()
     print("Running AI model...")
     # print(api_key)
     if not client:
