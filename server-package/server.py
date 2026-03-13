@@ -7,15 +7,17 @@ import llmMarkdown
 import transcriber
 import mongo
 import json
+from dotenv import dotenv_values
 import bcrypt
 import flask_jwt_extended as fljwt # pip install flask-jwt-extended
 
+env = dotenv_values("..//.env")
 
 app = Flask(__name__)
 jwt = fljwt.JWTManager(app)
 # 300 MB limit:
 app.config['MAX_CONTENT_LENGTH'] = 300 * 1024 * 1024
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "some-secret-key-for-SmartNoteApp")
+app.config["JWT_SECRET_KEY"] = str(env.get("JWT_SECRET_KEY", "some-secret-key-for-SmartNoteApp"))
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
 app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 app.config["JWT_HEADER_NAME"] = "Authorization"
@@ -169,5 +171,5 @@ def test_page():
     return send_file(os.path.join(BASE_DIR, "test.html"))
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80 if os.environ.get("FLASK_ENV") == "production" else 5005)
+    app.run(host="0.0.0.0", port=80 if str(env.get("FLASK_ENV")) == "production" else 5005)
     #  run with: gunicorn --bind 0.0.0.0:80 server:app
