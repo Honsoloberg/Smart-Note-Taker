@@ -1,51 +1,87 @@
-from faster_whisper import WhisperModel
-import torch
-import whisperx
-
-def whisperx_transcribe(model_name: str, audio_file: str) -> str:
-    batch_size = 10
-
-    device = "cpu" if torch.cuda.is_available() else "cpu"
-    compute_type = "float16" if device == "cuda" else "int8"
-    # Load model
-    model = whisperx.load_model(
-        model_name, 
-        device, 
-        compute_type=compute_type, 
-        task="transcribe",
-        )
-
-    # Transcribe audio
-    result = model.transcribe(audio_file, batch_size=batch_size, verbose=False)
-
-    # The result is a dict with segments + text
-    return result["text"]
-
-def transcribe_faster_whisper(audio_file: str) -> str:
-    # batch_size = 8
-
-    device = "cpu" if torch.cuda.is_available() else "cpu"
-    
-    compute_type = "float16" if device == "cuda" else "int8"
-    # Load model
-    model = WhisperModel(
-        "small", 
-        device, 
-        compute_type=compute_type,
-    )
-
-    # Transcribe audio
-    # result = model.transcribe(audio_file, vad_filter=False)
-    segments, info = model.transcribe(audio_file, beam_size=5)
-
-    print("Detected language '%s' with probability %f" % (info.language, info.language_probability))
-
-    text = ""
-    for segment in segments:
-        print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
-        text += segment.text
-    # The result is a dict with segments + text
-    return text
+import subprocess
+from vosk import Model, KaldiRecognizer, SetLogLevel
+import re
+from tqdm import tqdm
 
 def transcribe(audio_file: str) -> str:
-    return transcribe_faster_whisper(audio_file)
+    return vosk_transcribe(audio_file)
+
+SetLogLevel(-1)
+model = None
+
+def set_model():
+    global model
+    if not model:
+        model = Model(lang="en-us")
+
+
+def get_audio_duration(audio_file: str) -> float:
+    """Get duration in seconds using ffprobe"""
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            audio_file
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    return float(result.stdout.strip())
+
+def vosk_transcribe(audio_file: str) -> str:
+
+    set_model()
+    
+    rec = KaldiRecognizer(model, 16000)
+
+    # Critical performance flags
+    rec.SetWords(False)
+    rec.SetPartialWords(False)
+
+    duration = get_audio_duration(audio_file)
+    bytes_per_second = 16000 * 2  # 16kHz * 16-bit mono
+    total_bytes = int(duration * bytes_per_second)
+
+    process = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-loglevel", "error",
+            "-i", audio_file,
+            "-ar", "16000",
+            "-ac", "1",
+            "-f", "s16le",
+            "-"
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
+
+    with tqdm(
+        total=total_bytes,
+        unit="B",
+        unit_scale=True,
+        desc="Transcribing",
+    ) as pbar:
+
+        while True:
+            data = process.stdout.read(4000)
+            if not data:
+                break
+
+            rec.AcceptWaveform(data)
+            pbar.update(len(data))
+
+    print("Finalizing...")
+
+    # FinalResult() still returns JSON, but it's now *tiny*
+    final = rec.FinalResult()
+    print("got final result")
+    # Fast extraction of "text" without json.loads
+    match = re.search(r'"text"\s*:\s*"([^"]*)"', final)
+    text = match.group(1) if match else ""
+
+    print("Done")
+    return text

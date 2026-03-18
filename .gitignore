@@ -1,6 +1,6 @@
-.env
-.\server-package\markdown
-.\server-package\uploads
-.\server-package\__pycache__
-.\server-package\test_outputs
-.\server-package\transcript.txt
+server-package/.env
+server-package/markdown
+server-package/uploads
+server-package/test_outputs
+server-package/transcript.txt
+server-package/__pycache__/

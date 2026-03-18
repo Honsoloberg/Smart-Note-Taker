@@ -1,6 +1,6 @@
 import os
 from openai import OpenAI
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 
 TRANSCRIBE_PROMPT = """You are a meeting summarizer.
 Rules:
@@ -12,20 +12,30 @@ Rules:
 Summarize the following meeting transcript:
 """
 
-CHAT_PROMPT = """You are a helpful AI assistant that helps users by answering questions based on previous conversation history. 
+CHAT_PROMPT = """You are a helpful AI assistant that helps users by answering questions based on a audio transcription and a summaraized note generated from the transcription. 
 Use the context of the previous messages to provide accurate and relevant answers. Be concise and clear in your responses.
-The following message is a markdown file of the note you are to answer questions about:
+The following 2 messages are the transcription and summarized note respectively:
 """
+load_dotenv()
 
-env = dotenv_values("..\\.env")
-api_key = str(env.get("API_KEY"))
+api_key = str(os.getenv("API_KEY"))
+base_url = "https://api.deepseek.com"
 
-client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com") or None
+client = None
 model = "deepseek-chat"
 
-def run_AItranscribe(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROMPT) -> str:
+def get_client():
+    global client
+    if client is None:
+        client = OpenAI(api_key=api_key, base_url=base_url)
+    return client
+
+def run_noteGenerate(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROMPT) -> str:
+    global client
+
+    client = get_client()
     print("Running AI model...")
-    print(api_key)
+    # print(api_key)
     if not client:
         raise ValueError("OpenAI client not initialized. Check API key.")
     response = client.chat.completions.create(
@@ -40,20 +50,24 @@ def run_AItranscribe(model: str, user_prompt: str, system_prompt=TRANSCRIBE_PROM
     print(response.choices[0].message.content)
     return str(response.choices[0].message.content)
 
-
+ 
 def run_llmMarkdown(user_prompt: str) -> str:
     print("Running LLM Markdown generation...")
-    return run_AItranscribe(model, user_prompt)
+    return run_noteGenerate(model, user_prompt)
 
 def sanitize_Markdown(text: str) -> str:
     text = text.replace("–", "-")
     text = text.strip()
+    text = text.replace('"', "'")
     if text.endswith("---"):
         text = text[:-3]
     
     return text
 
-def run_AIchat(model: str, chat_history, note) -> str:
+def run_AIchat(model: str, chat_history, head) -> str:
+    global client
+
+    client = get_client()
     print("Running AI chat model...")
     if not client:
         raise ValueError("OpenAI client not initialized. Check API key.")
@@ -63,7 +77,10 @@ def run_AIchat(model: str, chat_history, note) -> str:
     # ]
     chat_history = chat_history.copy()
     chat_history.insert(0, {"role": "system", "content": CHAT_PROMPT})
-    chat_history.insert(1, {"role": "system", "content": note})
+    for m in head:
+        chat_history.insert(1, m)
+
+    # print(chat_history)
 
     
     response = client.chat.completions.create(
@@ -71,10 +88,11 @@ def run_AIchat(model: str, chat_history, note) -> str:
         messages=chat_history,
         stream=False
     )
+    
     print("AI chat model response received.")
     print(response.choices[0].message.content)
     return str(response.choices[0].message.content)
 
-def run_chat(chat_history, note) -> str:
+def run_chat(chat_history, head) -> str:
     print("Running chat...")
-    return run_AIchat(model, chat_history, note)
+    return run_AIchat(model, chat_history, head)

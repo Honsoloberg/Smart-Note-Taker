@@ -42,7 +42,7 @@ def chat_run(server_url, filename, prompt, timeout=300):
 
 def main():
     p = argparse.ArgumentParser(description='Upload audio to server and trigger processing')
-    p.add_argument('--file', '-f', required=True, help='Path to audio/transcription file')
+    p.add_argument('--file', '-f', default="", help='Path to audio/transcription file')
     p.add_argument('--server', '-s', default='http://127.0.0.1:5005', help='Server base URL')
     p.add_argument('--outdir', '-o', default='test_outputs', help='Directory to save returned markdown')
     p.add_argument('--mode', '-m', default='t', help='Specifiy the type of request sent. transcription(t) or chat(c)')
