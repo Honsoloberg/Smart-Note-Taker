@@ -15,6 +15,7 @@ import os
 import sys
 import requests
 import json
+import time
 
 
 def upload_file(server_url, filepath, timeout=60):
@@ -24,11 +25,15 @@ def upload_file(server_url, filepath, timeout=60):
         resp = requests.post(url, data=f, headers=headers, timeout=timeout)
     return resp
 
-
-def run_processing(server_url, filename, timeout=300):
+def run_processing(server_url, filename, timeout=10000):
     url = server_url.rstrip('/') + '/run'
     payload = {'filename': filename}
+    start = time.monotonic()
+    print(f"Start time: {start:.2f}")
     resp = requests.post(url, json=payload, timeout=timeout)
+    elapsed = time.monotonic() - start
+    # attach elapsed time for caller convenience
+    print(f"Process Completed In: {elapsed:.2f}")
     return resp
 
 def chat_run(server_url, filename, prompt, timeout=300):

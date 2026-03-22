@@ -8,10 +8,12 @@ def transcribe(audio_file: str) -> str:
 
 SetLogLevel(-1)
 model = None
+_TEXT_RE = re.compile(r'"text"\s*:\s*"([^"]*)"')
+
 
 def set_model():
     global model
-    if not model:
+    if model is None:
         model = Model(lang="en-us")
 
 
@@ -31,19 +33,18 @@ def get_audio_duration(audio_file: str) -> float:
     )
     return float(result.stdout.strip())
 
+
 def vosk_transcribe(audio_file: str) -> str:
-
     set_model()
-    
-    rec = KaldiRecognizer(model, 16000)
-
-    # Critical performance flags
-    rec.SetWords(False)
-    rec.SetPartialWords(False)
 
     duration = get_audio_duration(audio_file)
     bytes_per_second = 16000 * 2  # 16kHz * 16-bit mono
     total_bytes = int(duration * bytes_per_second)
+
+    # TC2 micro memory-friendly settings
+    segment_duration = 300  # seconds
+    segment_bytes = int(segment_duration * bytes_per_second)
+    block_size = 65536  # larger read size reduces syscall overhead
 
     process = subprocess.Popen(
         [
@@ -59,6 +60,9 @@ def vosk_transcribe(audio_file: str) -> str:
         stderr=subprocess.DEVNULL
     )
 
+    all_text = []
+    buffer = bytearray()
+
     with tqdm(
         total=total_bytes,
         unit="B",
@@ -67,21 +71,44 @@ def vosk_transcribe(audio_file: str) -> str:
     ) as pbar:
 
         while True:
-            data = process.stdout.read(4000)
+            data = process.stdout.read(block_size)
             if not data:
                 break
 
-            rec.AcceptWaveform(data)
+            buffer.extend(data)
             pbar.update(len(data))
 
-    print("Finalizing...")
+            while len(buffer) >= segment_bytes:
+                segment = bytes(buffer[:segment_bytes])
+                txt = _transcribe_segment(segment)
+                if txt:
+                    all_text.append(txt)
+                del buffer[:segment_bytes]
 
-    # FinalResult() still returns JSON, but it's now *tiny*
+    if buffer:
+        txt = _transcribe_segment(bytes(buffer))
+        if txt:
+            all_text.append(txt)
+
+    process.wait()
+
+    return " ".join(all_text)
+
+
+def _transcribe_segment(audio_data: bytes) -> str:
+    """Transcribe a single audio segment and free recognizer memory immediately."""
+    rec = KaldiRecognizer(model, 16000)
+    rec.SetWords(False)
+    rec.SetPartialWords(False)
+
+    # Feed in smaller chunks for less memory pressure inside Vosk
+    for chunk_start in range(0, len(audio_data), 32000):
+        chunk = audio_data[chunk_start:chunk_start + 32000]
+        rec.AcceptWaveform(chunk)
+
     final = rec.FinalResult()
-    print("got final result")
-    # Fast extraction of "text" without json.loads
-    match = re.search(r'"text"\s*:\s*"([^"]*)"', final)
+    match = _TEXT_RE.search(final)
     text = match.group(1) if match else ""
 
-    print("Done")
+    del rec
     return text
